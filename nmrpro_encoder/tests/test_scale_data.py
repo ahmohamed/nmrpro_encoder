@@ -5,72 +5,43 @@ from base64 import b64encode
 from nmrpro_encoder import encoder
 from nmrpro_encoder import decoder
 import numpy as np
+from nose_parameterized import parameterized
+import itertools
 
 class scaleDataTest(unittest.TestCase):
     def setUp(self):
         self.spec1d = fromFile("/Users/mohamedahmed/NMR/data/Bruker/expnmr_00001_1.tar").real
 
-    def test_scaled_postive_negative(self):
-        a = np.asarray([ 256,  512, 1025,   255, -257], dtype=np.int16)
-        b = encoder.scale_data(a, 16, "positive")
-        re_a = decoder.descale(b, 16, (a.min(), a.max()))
+    @parameterized.expand(itertools.product(
+        # arr having a negative value, or all postives
+        [[ 256,  512, 1025,   255, -257], [ 256,  512, 1025,   255, 257]],
+        [16,8]
+    ))
+    def test_scaled_postive_negative(self,arr, bits):
+        a = np.asarray(arr, dtype=np.int16)
+        b = encoder.scale_data(a, bits, "positive")
+        re_a = decoder.descale(b, bits, (a.min(), a.max()))
 
-        resolution = a.ptp() / (2.**16-1)
+        resolution = a.ptp() / (2.**bits-1)
         ts.assert_allclose( a, re_a, rtol=1, atol=resolution,
             err_msg='Rescaled sample array diviated from the original by more than accepted resolution')
 
-    def test_scaled_postive(self):
-        a = np.asarray([ 256,  512, 1025,   255, 257], dtype=np.int16)
-        b = encoder.scale_data(a, 16, "positive")
-        re_a = decoder.descale(b, 16,(a.min(), a.max()))
-
-        resolution = a.ptp() / (2.**16-1)
-        ts.assert_allclose( a, re_a, rtol=1, atol=resolution,
-            err_msg='Rescaled sample array diviated from the original by more than accepted resolution')
-
-    def test_scaled_postive_negative_8(self):
-        a = np.asarray([ 256,  512, 1025,   255, -257], dtype=np.int16)
-        b = encoder.scale_data(a, 8, "positive")
-        re_a = decoder.descale(b, 8,(a.min(), a.max()))
-
-        resolution = a.ptp() / (2.**8-1)
-        ts.assert_allclose( a, re_a, rtol=1, atol=resolution,
-            err_msg='Rescaled sample array diviated from the original by more than accepted resolution')
-
-    def test_scaled_postive_8(self):
-        a = np.asarray([ 256,  512, 1025,   255, 257], dtype=np.int16)
-        b = encoder.scale_data(a, 8, "positive")
-        re_a = decoder.descale(b, 8,(a.min(), a.max()))
-
-        resolution = a.ptp() / (2.**16-1)
-        ts.assert_allclose( a, re_a, rtol=1, atol=resolution,
-            err_msg='Rescaled sample array diviated from the original by more than accepted resolution')
-
-    def test_scaled_spec(self):
+    @parameterized.expand([
+        (8,), (16,)
+    ])
+    def test_scaled_spec(self, bits):
         a = self.spec1d
-        b = encoder.scale_data(a, 16, "positive")
-        re_a = decoder.descale(b, 16,(a.min(), a.max()))
+        b = encoder.scale_data(a, bits, "positive")
+        re_a = decoder.descale(b, bits, (a.min(), a.max()))
 
-        resolution = a.ptp() / (2.**16-1)
+        resolution = a.ptp() / (2.**bits-1)
         ts.assert_allclose( a, re_a, atol=resolution,
             err_msg='Rescaled spectrum diviated from the original by more than accepted resolution')
-
-
-    def test_scaled_spec_8(self):
-        a = self.spec1d
-        b = encoder.scale_data(a, 8, "positive")
-        re_a = decoder.descale(b, 8,(a.min(), a.max()))
-
-        resolution = a.ptp() / (2.**8-1)
-        ts.assert_allclose( a, re_a, atol=resolution,
-            err_msg='Rescaled spectrum diviated from the original by more than accepted resolution')
-
 
 class PNGConversionTest(unittest.TestCase):
     def setUp(self):
         self.spec1d = fromFile("/Users/mohamedahmed/NMR/data/Bruker/expnmr_00001_1.tar").real
-
-    
+  
     def test_png8(self):
         a = np.asarray([ 0,  127, 200,   255, 20], dtype=np.int16)
         a = np.uint8(a)
@@ -152,24 +123,18 @@ class EncodeSpecTest(unittest.TestCase):
     def setUp(self):
         self.spec1d = fromFile("/Users/mohamedahmed/NMR/data/Bruker/expnmr_00001_1.tar").real
 
-    def test_encode8(self):
+    @parameterized.expand([
+        (8,), (16,)
+    ])
+    def test_encode(self, bits):
+        format = "png" if bits == 8 else "png16"
+        
         a = self.spec1d
-        b = encoder.encode1DArrayAsPNG(a, "png")
+        b = encoder.encode1DArrayAsPNG(a, format)
         
-        re_a = decoder.decode_png_array(b, "png", (a.min(), a.max()) )
+        re_a = decoder.decode_png_array(b, format, (a.min(), a.max()) )
         
-        resolution = a.ptp() / (2.**8-1)
-        
-        ts.assert_allclose( a, re_a, atol=resolution,
-            err_msg='Rescaled spectrum diviated from the original by more than accepted resolution')
-
-    def test_encode16(self):
-        a = self.spec1d
-        b = encoder.encode1DArrayAsPNG(a, "png16")
-        
-        re_a = decoder.decode_png_array(b, "png16", (a.min(), a.max()) )
-        
-        resolution = a.ptp() / (2.**16-1)
+        resolution = a.ptp() / (2.**bits-1)
         
         ts.assert_allclose( a, re_a, atol=resolution,
             err_msg='Rescaled spectrum diviated from the original by more than accepted resolution')
