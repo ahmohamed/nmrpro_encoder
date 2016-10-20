@@ -13,7 +13,7 @@ class scaleDataTest(unittest.TestCase):
     def test_scaled_postive_negative(self):
         a = np.asarray([ 256,  512, 1025,   255, -257], dtype=np.int16)
         b = encoder.scale_data(a, 16, "positive")
-        re_a = decoder.descale(b, 16,(a.min(), a.max()))
+        re_a = decoder.descale(b, 16, (a.min(), a.max()))
 
         resolution = a.ptp() / (2.**16-1)
         ts.assert_allclose( a, re_a, rtol=1, atol=resolution,
