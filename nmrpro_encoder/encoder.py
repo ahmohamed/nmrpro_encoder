@@ -83,27 +83,33 @@ def encode1DSpec(obj, format):
     else:
         s_id = None
     
-    obj = obj.real
-    y_domain = [float(obj.min()), float(obj.max())]
-    
-    # write data as png image
-    ouput_format = format
-    ret = {'format':ouput_format,
-    'x_domain':x_domain,
-    'y_domain':y_domain,
-    'bits': 8 if format == 'png' else 16,
+    out = {
     'nd':1,
     's_id': s_id,
     'label': label,
     'x_label':x_label
     }
+    if not obj.spec_flags.get("data_updated", True):
+        return out
     
-    if obj.spec_flags.get("data_updated", True):
-        data = encode1DArrayAsPNG(obj, format)
-        ret['data'] = data
+    obj = obj.real
+    y_domain = [float(obj.min()), float(obj.max())]
     
-    return ret
+    # write data as png image
+    ouput_format = format
+    data = encode1DArrayAsPNG(obj, format)
+    
+    
+    out.update({'format':ouput_format,
+    'data':data,
+    'x_domain':x_domain,
+    'y_domain':y_domain,
+    'bits': 8 if format == 'png' else 16,
+    'nd':1,
+    })
+    
 
+    return out
 
 def encode2DSpec(obj, format):
     x_domain = obj.uc[1].ppm_limits()
@@ -116,14 +122,21 @@ def encode2DSpec(obj, format):
         s_id = obj.__s_id__
     else: s_id = None
     
+    out = {
+    'nd':2,
+    's_id': s_id,
+    'label': label
+    }
+    if not obj.spec_flags.get("data_updated", True):
+        return out
+    
+    
     obj = obj.real_part()
     #obj = np.sign(obj) * np.log(np.abs(obj) + 1)
-    print(obj.shape)
-    
     
     z_domain = max( abs(float(obj.min())), abs(float(obj.max())) )
     z_domain = [-z_domain, z_domain]
-    print(z_domain)
+    # print(z_domain)
     
     obj = scale_data(obj, 8, "both")
     obj = np.uint8( obj )
@@ -136,17 +149,17 @@ def encode2DSpec(obj, format):
     data = get_data_as_png(obj[::-1])
     data = encodeBytesIO(data)
     
-    return {'format':ouput_format,
-    'data': data,
+    
+    out.update({'format':ouput_format,
+    'data':data,
     'x_domain':x_domain,
     'y_domain':y_domain,
     'z_domain':z_domain,
-    'bits':8,
-    'nd':2,
-    's_id': s_id,
-    'label': label
-    }
-
+    'bits':8
+    })
+    
+    return out
+    
 def encodeSpec(obj, format='png16'):
     print(type(obj))
     if isinstance(obj, NMRSpectrum1D):
