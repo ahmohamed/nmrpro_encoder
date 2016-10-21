@@ -161,7 +161,6 @@ def encode2DSpec(obj, format):
     return out
     
 def encodeSpec(obj, format='png16'):
-    print(type(obj))
     if isinstance(obj, NMRSpectrum1D):
         ret =  encode1DSpec(obj,format)
     elif isinstance(obj, NMRSpectrum2D):
